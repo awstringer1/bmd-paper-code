@@ -230,4 +230,4 @@ outputtable <- processed_sims %>%
 
 readr::write_csv(outputtable,file = file.path(resultspath,tablename))
 
-cat("Finished saving output table, file: ")
+cat("Finished saving output table, file: ",file.path(resultspath,tablename),"\n")
