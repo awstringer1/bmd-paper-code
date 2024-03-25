@@ -63,7 +63,7 @@ boottime <- comptimes['bmd_samples']
 reltimes <- 100*round(comptimes/boottime,4)
 total_noboot <- comptimes['model'] + comptimes['posterior_samples'] + comptimes['bmdl_score']
 
-# plot for paper
+# plots for paper
 plotdat <- plot(mod,plot=FALSE)
 plotdatmono <- plotdat$mono
 
@@ -102,4 +102,24 @@ curve(dnorm(x,bmdmean,bmdsd),add=TRUE)
 abline(v=get_all_bmdl(mod)['delta'],lty='dotted')
 abline(v=get_all_bmdl(mod)['score'],lty='dashed')
 abline(v=get_all_bmdl(mod)['bmdl_bayes'],lty='dotdash')
+dev.off()
+
+# residual plot
+pdf(file.path(resultspath, "residualfittedplot.pdf"), width = 5, height = 5)
+plot(residuals(mod) ~ fitted(mod),
+  main = "Residuals vs fitted values, PAE dose-response model",
+  xlab = "Fitted Values",
+  ylab = "Residuals"
+)
+abline(h = 0, lty = "dashed")
+dev.off()
+
+pdf(file.path(resultspath, "residualqqplot.pdf"), width = 5, height = 5)
+qqnorm(residuals(mod),
+  main = "QQ-plot of residuals, PAE dose-response model",
+  xlab = "N(0,1) Quantiles",
+  ylab = "Empirical Quantiles of Residuals"
+)
+qqline(residuals(mod))
+
 dev.off()
