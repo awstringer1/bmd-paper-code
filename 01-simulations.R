@@ -32,6 +32,9 @@ if (!require("semibmd",character.only = TRUE,quietly = TRUE)) {
 	stop("semibmd package not found. Install with the command:\n\n remotes::install_github('awstringer1/semibmd')\n")
 }
 
+# Set sizes for saving figures
+GGPLOTTEXTSIZE <- 20
+
 ## Set Paths ----
 
 # Set these to what you want to call the results
@@ -231,3 +234,38 @@ outputtable <- processed_sims %>%
 readr::write_csv(outputtable,file = file.path(resultspath,tablename))
 
 cat("Finished saving output table, file: ",file.path(resultspath,tablename),"\n")
+
+## Plots ##
+# Make plots of the bias/CP, easier for the reader to visualize.
+scale_lab <- function(s) paste0("f(x) = exp(-",s,"x)")
+biasplot <- outputtable %>%
+	ggplot(aes(x = factor(n), y = bias_mean, group = factor(sigma), colour = factor(sigma))) + 
+	theme_bw() + 
+	facet_grid( ~ scale, labeller = labeller(scale = scale_lab)) + 
+	geom_line() +
+	geom_line(aes(y = bias_mean + 2 * bias_sd), linetype = "dashed") +
+	geom_line(aes(y = bias_mean - 2 * bias_sd), linetype = "dashed") +
+	labs(title = expression("Empirical Bias,"~widehat(x)[b]~-~x[b]*", in 100,000 simulations"),
+			 x = "Sample size, n", y = "Empirical bias",
+			 colour = expression(sigma)) +
+	theme(legend.position = "bottom", text = element_text(size = GGPLOTTEXTSIZE))
+
+coverageplot <- outputtable %>%
+	select(n, scale, sigma, contains("covr")) %>%
+	pivot_longer(contains("covr"), names_to = "temp", values_to = "coverage") %>%
+	mutate(type = str_match(temp, "delta|score|bayes")[ ,1],
+				 whichthing = str_match(temp, "mean|sd")[ ,1]) %>%
+	pivot_wider(id_cols = all_of(c("n", "scale", "sigma", "type")), names_from = whichthing, values_from = coverage)
+
+				
+
+	ggplot(aes(x = factor(n), y = bias_mean, group = factor(sigma), colour = factor(sigma))) + 
+	theme_bw() + 
+	facet_grid( ~ scale, labeller = labeller(scale = scale_lab)) + 
+	geom_line() +
+	geom_line(aes(y = bias_mean + 2 * bias_sd), linetype = "dashed") +
+	geom_line(aes(y = bias_mean - 2 * bias_sd), linetype = "dashed") +
+	labs(title = expression("Empirical Bias,"~widehat(x)[b]~-~x[b]*", in 100,000 simulations"),
+			 x = "Sample size, n", y = "Empirical bias",
+			 colour = expression(sigma)) +
+	theme(legend.position = "bottom", text = element_text(size = GGPLOTTEXTSIZE))

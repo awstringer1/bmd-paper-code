@@ -39,6 +39,7 @@ dat$CogScoreScaled <- scale(dat$CogScore)
 dat$Cohort <- factor(dat$CohortIndicator)
 
 ## Model ##
+set.seed(423978) # For bootstrapping
 mod <- benchmark_dose_tmb(
   monosmooths = list(s(Alch3, bs="bs",k=50)),
   smooths = list(s(PS3, by=Cohort)),
@@ -105,8 +106,9 @@ abline(v=get_all_bmdl(mod)['bmdl_bayes'],lty='dotdash')
 dev.off()
 
 # residual plot
+modresid <- residuals(mod)
 pdf(file.path(resultspath, "residualfittedplot.pdf"), width = 5, height = 5)
-plot(residuals(mod) ~ fitted(mod),
+plot(modresid ~ fitted(mod),
   main = "Residuals vs fitted values, PAE dose-response model",
   xlab = "Fitted Values",
   ylab = "Residuals"
@@ -115,11 +117,18 @@ abline(h = 0, lty = "dashed")
 dev.off()
 
 pdf(file.path(resultspath, "residualqqplot.pdf"), width = 5, height = 5)
-qqnorm(residuals(mod),
+qqnorm(modresid,
   main = "QQ-plot of residuals, PAE dose-response model",
   xlab = "N(0,1) Quantiles",
-  ylab = "Empirical Quantiles of Residuals"
+  ylab = "Empirical Quantiles of Residuals",
+  yaxt = "n",
+  xaxt = "n"
 )
-qqline(residuals(mod))
-
+qqline(modresid)
+axis(1, at = seq(-4, 4, by = .5))
+axis(2, at = seq(-4, 4, by = .5))
+abline(h = quantile(modresid, .025), lty = "dashed")
+abline(h = quantile(modresid, .975), lty = "dashed")
+abline(v = qnorm(.025), lty = "dashed")
+abline(v = qnorm(.975), lty = "dashed")
 dev.off()
