@@ -33,13 +33,15 @@ if (!require("semibmd",character.only = TRUE,quietly = TRUE)) {
 }
 
 # Set sizes for saving figures
-GGPLOTTEXTSIZE <- 20
+GGPLOTTEXTSIZE <- 16
+GGPLOTWIDTH <- 7
+GGPLOTHEIGHT <- 10
 
 ## Set Paths ----
 
 # Set these to what you want to call the results
-simname <- "202311-16-v1.RData"
-tablename <- "202311-16-v1.csv"
+simname <- "202403-27-v1.RData"
+tablename <- "202403-27-v1.csv"
 
 # Change this to where you want the results saved
 globalpath <- "~/work/projects/benchmark-dose"
@@ -201,7 +203,8 @@ cat("Saving output table...\n")
 outputtable <- processed_sims %>%
 	filter_all(all_vars(is.finite(.))) %>%
 	group_by(n,scale,sigma) %>%
-	summarize(bias_mean = 100*mean(bias,na.rm=TRUE),
+	summarize(
+			bias_mean = 100*mean(bias,na.rm=TRUE),
 		  bias_sd = 100*(sd(bias,na.rm=TRUE)/sqrt(n())),
 		  covr_delta_mean = mean(covr_delta,na.rm=TRUE),
 		  covr_delta_sd = sqrt(covr_delta_mean*(1-covr_delta_mean)/n()),
@@ -238,6 +241,7 @@ cat("Finished saving output table, file: ",file.path(resultspath,tablename),"\n"
 ## Plots ##
 # Make plots of the bias/CP, easier for the reader to visualize.
 scale_lab <- function(s) paste0("f(x) = exp(-",s,"x)")
+sigma_lab <- function(s) paste0(expression(sigma~"="), s)
 biasplot <- outputtable %>%
 	ggplot(aes(x = factor(n), y = bias_mean, group = factor(sigma), colour = factor(sigma))) + 
 	theme_bw() + 
@@ -245,8 +249,8 @@ biasplot <- outputtable %>%
 	geom_line() +
 	geom_line(aes(y = bias_mean + 2 * bias_sd), linetype = "dashed") +
 	geom_line(aes(y = bias_mean - 2 * bias_sd), linetype = "dashed") +
-	labs(title = expression("Empirical Bias,"~widehat(x)[b]~-~x[b]*", in 100,000 simulations"),
-			 x = "Sample size, n", y = "Empirical bias",
+	labs(title = expression("Empirical Bias,"~widehat(x)[b]~-~x[b]),
+			 x = "Sample size, n", y = "Empirical Bias",
 			 colour = expression(sigma)) +
 	theme(legend.position = "bottom", text = element_text(size = GGPLOTTEXTSIZE))
 
@@ -255,17 +259,29 @@ coverageplot <- outputtable %>%
 	pivot_longer(contains("covr"), names_to = "temp", values_to = "coverage") %>%
 	mutate(type = str_match(temp, "delta|score|bayes")[ ,1],
 				 whichthing = str_match(temp, "mean|sd")[ ,1]) %>%
-	pivot_wider(id_cols = all_of(c("n", "scale", "sigma", "type")), names_from = whichthing, values_from = coverage)
-
-				
-
-	ggplot(aes(x = factor(n), y = bias_mean, group = factor(sigma), colour = factor(sigma))) + 
+	pivot_wider(id_cols = all_of(c("n", "scale", "sigma", "type")), names_from = whichthing, values_from = coverage) %>%
+	ggplot(aes(x = factor(n), y = mean, group = factor(type), colour = factor(type))) + 
 	theme_bw() + 
-	facet_grid( ~ scale, labeller = labeller(scale = scale_lab)) + 
+	facet_grid(scale ~ sigma, labeller = label_bquote(cols = sigma~"="~.(sigma), rows = "f(x) = exp(-"*.(scale)*"x)")) + 
 	geom_line() +
-	geom_line(aes(y = bias_mean + 2 * bias_sd), linetype = "dashed") +
-	geom_line(aes(y = bias_mean - 2 * bias_sd), linetype = "dashed") +
-	labs(title = expression("Empirical Bias,"~widehat(x)[b]~-~x[b]*", in 100,000 simulations"),
-			 x = "Sample size, n", y = "Empirical bias",
-			 colour = expression(sigma)) +
+	geom_line(aes(y = mean + 2 * sd), linetype = "dashed") +
+	geom_line(aes(y = mean - 2 * sd), linetype = "dashed") +
+	labs(title = expression("Empirical Coverage: proportion of"~widehat(x)[l]*""<=x[b]),
+			 x = "Sample size, n", y = "Empirical Coverage, %",
+			 colour = expression(widehat(x)[l])) +
+	coord_cartesian(ylim = 100*c(0.8,1)) + 
+	scale_y_continuous(breaks = seq(80, 100, by = 5)) +
+	# scale_colour_brewer(type = "qual", palette = 2, labels = c("bayes" = "Bootstrap", "score" = "Pivot", "delta" = "Delta")) + 
+	# scale_colour_brewer(type = "seq", palette = "Greys", labels = c("bayes" = "Bootstrap", "score" = "Pivot", "delta" = "Delta")) + 
+	scale_colour_manual(
+		labels = c("score" = "Pivot", "bayes" = "Bootstrap", "delta" = "Delta"),
+		breaks = c("score", "bayes", "delta"),
+		values = c("#000000", "#636363", "#bdbdbd")
+	) +
+	geom_hline(yintercept = 97.5, linetype = "dotted") + 
 	theme(legend.position = "bottom", text = element_text(size = GGPLOTTEXTSIZE))
+
+ggsave(file.path(resultspath, "biasplot.pdf"), plot = biasplot, width = GGPLOTWIDTH, height = GGPLOTHEIGHT)
+ggsave(file.path(resultspath, "coverageplot.pdf"), plot = coverageplot, width = GGPLOTWIDTH, height = GGPLOTHEIGHT)
+
+# For the supplement: boxplots of the lengths of the CIs (BMD - BMDL)
