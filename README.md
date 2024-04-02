@@ -14,3 +14,8 @@ An informative error will be thrown if this has not been done.
 You then need to create a directory to store the results, and then change the corresponding path
 in the script. Other than that, they should run as-is, with no other user changes required.
 They will attempt to install all other required packages from `CRAN` automatically.
+
+To run `02-pae-data.R`, you need the Prenatal Alcohol Exposure (PAE) data.
+This is obtained from the [Harvard DataVerse](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/SCLH9W);
+the link is also given in the code file itself. All you have to do is convert the `.xlsx` file to a `.csv` and then place the data
+on your computer as described in the script.
