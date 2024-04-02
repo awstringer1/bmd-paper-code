@@ -33,10 +33,16 @@ if (!dir.exists(resultspath)) dir.create(resultspath)
 ## Shouldn't need to change anything beyond this point ----
 
 ## Data ##
-
+# Data were obtained from: https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/SCLH9W
+# and saved to datapath/pae-data.csv by exporting to csv from Excel.
+# No other changes were made.
 dat <- read_csv(file.path(datapath,"pae-data.csv"))
-dat$CogScoreScaled <- scale(dat$CogScore)
+dat$CogScoreScaled <- scale(dat[["Cog score"]])[ ,1]
 dat$Cohort <- factor(dat$CohortIndicator)
+dat$Alch3 <- dat[["Alch2...5"]]
+nrow(dat) # 2228
+dat <- filter(dat, !is.na(CogScoreScaled), !is.na(Alch3), !is.na(PS3))
+nrow(dat) # 2227
 
 ## Model ##
 set.seed(423978) # For bootstrapping
@@ -55,7 +61,7 @@ mod <- benchmark_dose_tmb(
   verbose = FALSE,
   scale_data = FALSE # Already pre-scaled
 ) # Takes about 5 minutes on 2021 M1 Max Macbook Pro
-
+  
 summary(mod)
 get_all_bmdl(mod)
 # relative computation times

@@ -40,8 +40,8 @@ GGPLOTHEIGHT <- 10
 ## Set Paths ----
 
 # Set these to what you want to call the results
-simname <- "202403-27-v1.RData"
-tablename <- "202403-27-v1.csv"
+simname <- "202403-28-v1.RData"
+tablename <- "202403-28-v1.csv"
 
 # Change this to where you want the results saved
 globalpath <- "~/work/projects/benchmark-dose"
@@ -242,17 +242,6 @@ cat("Finished saving output table, file: ",file.path(resultspath,tablename),"\n"
 # Make plots of the bias/CP, easier for the reader to visualize.
 scale_lab <- function(s) paste0("f(x) = exp(-",s,"x)")
 sigma_lab <- function(s) paste0(expression(sigma~"="), s)
-biasplot <- outputtable %>%
-	ggplot(aes(x = factor(n), y = bias_mean, group = factor(sigma), colour = factor(sigma))) + 
-	theme_bw() + 
-	facet_grid( ~ scale, labeller = labeller(scale = scale_lab)) + 
-	geom_line() +
-	geom_line(aes(y = bias_mean + 2 * bias_sd), linetype = "dashed") +
-	geom_line(aes(y = bias_mean - 2 * bias_sd), linetype = "dashed") +
-	labs(title = expression("Empirical Bias,"~widehat(x)[b]~-~x[b]),
-			 x = "Sample size, n", y = "Empirical Bias",
-			 colour = expression(sigma)) +
-	theme(legend.position = "bottom", text = element_text(size = GGPLOTTEXTSIZE))
 
 coverageplot <- outputtable %>%
 	select(n, scale, sigma, contains("covr")) %>%
@@ -281,7 +270,61 @@ coverageplot <- outputtable %>%
 	geom_hline(yintercept = 97.5, linetype = "dotted") + 
 	theme(legend.position = "bottom", text = element_text(size = GGPLOTTEXTSIZE))
 
-ggsave(file.path(resultspath, "biasplot.pdf"), plot = biasplot, width = GGPLOTWIDTH, height = GGPLOTHEIGHT)
 ggsave(file.path(resultspath, "coverageplot.pdf"), plot = coverageplot, width = GGPLOTWIDTH, height = GGPLOTHEIGHT)
 
-# For the supplement: boxplots of the lengths of the CIs (BMD - BMDL)
+# For the supplement: boxplots of the lengths of the CIs (BMD - BMDL) and the bias
+lengthtable <- processed_sims %>%
+	select(n, scale, sigma, estimate, bmdl_score, bmdl_delta, bmdl_bayes) %>%
+	pivot_longer(contains("bmdl"), names_to = "method", values_to = "bmdl") %>%
+	mutate(method = str_replace(method, "bmdl_", ""), length = estimate - bmdl)
+
+lengthplotgood <- lengthtable %>%
+	filter(length < .1) %>%
+	ggplot(aes(x = method, y = length)) + 
+	theme_bw() + 
+	facet_grid(scale ~ n, labeller = label_bquote(cols = n~"="~.(n), rows = "f(x) = exp(-"*.(scale)*"x)")) + 
+	geom_boxplot() +
+	scale_x_discrete(labels = c("bayes" = "Boot", "delta" = "Delta", "score" = "Pivot")) + 
+	labs(title = "Lengths of one-sided BMD confidence intervals",
+			x = "Method", y = expression("Length,"~widehat(x)[b] - widehat(x)[l])) +
+	theme(text = element_text(size = GGPLOTTEXTSIZE))
+
+
+lengthplotbad <- lengthtable %>%
+	filter(length < 1e06) %>%
+	ggplot(aes(x = method, y = length)) + 
+	theme_bw() + 
+	facet_grid(scale ~ n, labeller = label_bquote(cols = n~"="~.(n), rows = "f(x) = exp(-"*.(scale)*"x)")) + 
+	geom_boxplot() +
+	scale_x_discrete(labels = c("bayes" = "Boot", "delta" = "Delta", "score" = "Pivot")) + 
+	scale_y_continuous(labels = scales::comma_format()) +
+	labs(title = "Lengths of one-sided BMD confidence intervals",
+			x = "Method", y = expression("Length,"~widehat(x)[b] - widehat(x)[l])) +
+	theme(text = element_text(size = GGPLOTTEXTSIZE))
+
+ggsave(file.path(resultspath, "lengthplotgood.pdf"), plot = lengthplotgood, width = GGPLOTWIDTH, height = GGPLOTHEIGHT)
+ggsave(file.path(resultspath, "lengthplotbad.pdf"), plot = lengthplotbad, width = GGPLOTWIDTH, height = GGPLOTHEIGHT)
+
+biasplot <- processed_sims %>%
+	ggplot(aes(x = factor(n), y = bias)) + 
+	theme_bw() + 
+	facet_grid(scale ~ sigma, labeller = label_bquote(cols = sigma~"="~.(sigma), rows = "f(x) = exp(-"*.(scale)*"x)")) + 
+	geom_boxplot() +
+	labs(title = expression("Empirical Bias,"~widehat(x)[b]~-~x[b]),
+			 x = "Sample size, n", y = "Empirical Bias") +
+	theme(text = element_text(size = GGPLOTTEXTSIZE))
+
+biasplotzoom <- processed_sims %>%
+filter(abs(bias) < .05) %>%
+	ggplot(aes(x = factor(n), y = bias)) + 
+	theme_bw() + 
+	facet_grid(scale ~ sigma, labeller = label_bquote(cols = sigma~"="~.(sigma), rows = "f(x) = exp(-"*.(scale)*"x)")) + 
+	geom_boxplot() +
+	labs(title = expression("Empirical Bias,"~widehat(x)[b]~-~x[b]),
+			 x = "Sample size, n", y = "Empirical Bias") +
+	theme(text = element_text(size = GGPLOTTEXTSIZE))
+
+	
+
+ggsave(file.path(resultspath, "biasplot.pdf"), plot = biasplot, width = GGPLOTWIDTH, height = GGPLOTHEIGHT)
+ggsave(file.path(resultspath, "biasplotzoom.pdf"), plot = biasplotzoom, width = GGPLOTWIDTH, height = GGPLOTHEIGHT)
