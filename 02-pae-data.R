@@ -45,7 +45,7 @@ dat <- filter(dat, !is.na(CogScoreScaled), !is.na(Alch3), !is.na(PS3))
 nrow(dat) # 2227
 
 ## Model ##
-set.seed(423978) # For bootstrapping
+set.seed(423978) # For bootstrapping, to reproduce exactly the numbers in the paper
 mod <- benchmark_dose_tmb(
   monosmooths = list(s(Alch3, bs="bs",k=50)),
   smooths = list(s(PS3, by=Cohort)),
@@ -61,7 +61,7 @@ mod <- benchmark_dose_tmb(
   verbose = FALSE,
   scale_data = FALSE # Already pre-scaled
 ) # Takes about 5 minutes on 2021 M1 Max Macbook Pro
-  
+
 summary(mod)
 get_all_bmdl(mod)
 # relative computation times
@@ -76,7 +76,8 @@ plotdatmono <- plotdat$mono
 
 pdf(file.path(resultspath,"dose-response-plot.pdf"),width=5,height=5)
 with(dat,plot(CogScoreScaled~Alch3,
-              main = "Dose-response curve, cog. score vs drinks/day",
+              main = "",
+              # main = "Dose-response curve, cog. score vs drinks/day",
               xlab = "log(1+drinks per day)",
               ylab = "Standardized cognitive function score",
               pch = "."))
@@ -100,7 +101,8 @@ bmdsd <- sqrt(modapprox[1]) / abs(modapprox[2])
 pdf(file.path(resultspath,"bmdhistogram.pdf"),width=5,height=5)
 hist(bmd_samps,
      freq = FALSE,
-     main = "Posterior dist. of the BMD, 100,000 samples",
+     main = "",
+    #  main = "Posterior dist. of the BMD, 100,000 samples",
      xlab = "Sampled benchmark dose",
      ylab = "Density",
      breaks = 100
